@@ -1,5 +1,5 @@
 -- Compose and send a new email from a specific account
--- Arguments: account, to, subject, body, cc, bcc
+-- Arguments: account, to, subject, body, cc, bcc, attachment_path
 
 on run argv
 	set targetAccountName to item 1 of argv
@@ -8,6 +8,7 @@ on run argv
 	set emailBody to item 4 of argv
 	set ccRecipients to item 5 of argv -- Can be empty string
 	set bccRecipients to item 6 of argv -- Can be empty string
+	set attachmentPath to item 7 of argv -- Can be empty string
 
 	tell application "Mail"
 		set outputText to "COMPOSING EMAIL" & return & return
@@ -18,8 +19,11 @@ on run argv
 			-- Create new outgoing message
 			set newMessage to make new outgoing message with properties {subject:emailSubject, content:emailBody, visible:false}
 
-			-- Set the sender account
-			set sender of newMessage to targetAccount
+			-- Set the sender account (use first email address from account)
+			set accountEmails to email addresses of targetAccount
+			if (count of accountEmails) > 0 then
+				set sender of newMessage to item 1 of accountEmails
+			end if
 
 			-- Add TO recipients
 			tell newMessage
@@ -54,6 +58,13 @@ on run argv
 				end if
 			end tell
 
+			-- Add attachment if provided
+			if attachmentPath is not "" then
+				tell newMessage
+					make new attachment with properties {file name:attachmentPath}
+				end tell
+			end if
+
 			-- Send the message
 			send newMessage
 
@@ -71,6 +82,10 @@ on run argv
 
 			set outputText to outputText & "Subject: " & emailSubject & return
 			set outputText to outputText & "Body: " & emailBody & return
+
+			if attachmentPath is not "" then
+				set outputText to outputText & "Attachment: " & attachmentPath & return
+			end if
 
 		on error errMsg
 			return "Error: " & errMsg & return & "Please check that the account name and email addresses are correct."

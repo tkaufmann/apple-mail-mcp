@@ -1,17 +1,18 @@
 -- Search for emails by subject keyword and return with full content preview
 -- Arguments: account, subject_keyword, max_results, max_content_length, mailbox
 
+-- Helper function for case-insensitive matching
+on lowercase(str)
+	set lowerStr to do shell script "echo " & quoted form of str & " | tr '[:upper:]' '[:lower:]'"
+	return lowerStr
+end lowercase
+
 on run argv
 	set targetAccountName to item 1 of argv
 	set subjectKeyword to item 2 of argv
 	set maxResults to item 3 of argv as integer
 	set maxContentLength to item 4 of argv as integer
 	set mailboxName to item 5 of argv
-
-	on lowercase(str)
-		set lowerStr to do shell script "echo " & quoted form of str & " | tr '[:upper:]' '[:lower:]'"
-		return lowerStr
-	end lowercase
 
 	tell application "Mail"
 		set outputText to "SEARCH RESULTS FOR: " & subjectKeyword & return

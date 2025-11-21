@@ -5,7 +5,7 @@ Provides tools for listing, viewing, and getting overview of inbox emails.
 
 from typing import Optional
 from mcp_instance import mcp
-from utils.applescript import run_applescript, run_applescript_file, inject_preferences
+from utils.applescript import run_applescript_file, inject_preferences
 
 
 @mcp.tool()
@@ -59,23 +59,4 @@ def get_recent_emails(
         count,
         "true" if include_content else "false"
     )
-    return result
-
-
-@mcp.tool()
-@inject_preferences
-def get_inbox_overview() -> str:
-    """
-    Get a comprehensive overview of your email inbox status across all accounts.
-
-    Returns:
-        Comprehensive overview including:
-        - Unread email counts by account
-        - List of available mailboxes/folders
-        - AI suggestions for actions (move emails, respond to messages, highlight action items, etc.)
-
-    This tool is designed to give you a complete picture of your inbox and prompt the assistant
-    to suggest relevant actions based on the current state.
-    """
-    result = run_applescript_file("inbox/get_inbox_overview.applescript")
     return result

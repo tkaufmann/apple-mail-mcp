@@ -197,3 +197,4 @@ No formal test suite. Testing approach:
 - **FastMCP Framework**: https://github.com/jlowin/fastmcp
 - **Claude Code Skills**: https://docs.claude.com/en/docs/claude-code/skills
 - **AppleScript Mail Dictionary**: Check in Script Editor → File → Open Dictionary → Mail
+- Account Taquiri Tim hat E-Mail-Adresse tk@taquiri.de, meine Hauptadresse für geschäftliche Zwecke

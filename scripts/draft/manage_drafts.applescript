@@ -48,8 +48,11 @@ on run argv
 				-- Create new outgoing message (draft)
 				set newDraft to make new outgoing message with properties {subject:emailSubject, content:emailBody, visible:false}
 
-				-- Set the sender account
-				set sender of newDraft to targetAccount
+				-- Set the sender account (use first email address from account)
+				set accountEmails to email addresses of targetAccount
+				if (count of accountEmails) > 0 then
+					set sender of newDraft to item 1 of accountEmails
+				end if
 
 				-- Add recipients
 				tell newDraft

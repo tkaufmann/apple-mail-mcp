@@ -48,8 +48,11 @@ on run argv
 				-- Create forward
 				set forwardMsg to forward foundMessage with opening window
 
-				-- Set sender account
-				set sender of forwardMsg to targetAccount
+				-- Set sender account (use first email address from account)
+				set accountEmails to email addresses of targetAccount
+				if (count of accountEmails) > 0 then
+					set sender of forwardMsg to item 1 of accountEmails
+				end if
 
 				-- Add recipients
 				make new to recipient at end of to recipients of forwardMsg with properties {address:toRecipients}

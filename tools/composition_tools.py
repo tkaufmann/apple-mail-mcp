@@ -16,7 +16,8 @@ def compose_email(
     subject: str,
     body: str,
     cc: Optional[str] = None,
-    bcc: Optional[str] = None
+    bcc: Optional[str] = None,
+    attachment_path: Optional[str] = None
 ) -> str:
     """
     Compose and send a new email from a specific account.
@@ -28,6 +29,7 @@ def compose_email(
         body: Email body text
         cc: Optional CC recipients, comma-separated for multiple
         bcc: Optional BCC recipients, comma-separated for multiple
+        attachment_path: Optional path to file to attach (e.g., "/tmp/document.pdf")
 
     Returns:
         Confirmation message with details of the sent email
@@ -39,7 +41,8 @@ def compose_email(
         subject,
         body,
         cc or "",
-        bcc or ""
+        bcc or "",
+        attachment_path or ""
     )
     return result
 

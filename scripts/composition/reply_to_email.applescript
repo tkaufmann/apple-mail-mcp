@@ -42,13 +42,16 @@ on run argv
 
 				-- Create reply
 				if replyToAll then
-					set replyMessage to reply foundMessage with opening window reply to all
+					set replyMessage to reply foundMessage with opening window with reply to all
 				else
 					set replyMessage to reply foundMessage with opening window
 				end if
 
-				-- Ensure the reply is from the correct account
-				set sender of replyMessage to targetAccount
+				-- Ensure the reply is from the correct account (use first email address)
+				set accountEmails to email addresses of targetAccount
+				if (count of accountEmails) > 0 then
+					set sender of replyMessage to item 1 of accountEmails
+				end if
 
 				-- Set reply content
 				set content of replyMessage to replyBody
