@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Apple Mail MCP Server - A FastMCP-based Model Context Protocol server that provides AI assistants with natural language access to Apple Mail on macOS. The project includes both an MCP server with 18 email management tools and a comprehensive Email Management Expert Skill for Claude Code.
+Apple Mail MCP Server - A FastMCP-based Model Context Protocol server that provides AI assistants with natural language access to Apple Mail on macOS. The server provides 18 powerful email management tools.
 
 **Architecture:**
-- **MCP Server** (`apple_mail_mcp.py`): Single-file FastMCP server using AppleScript to control Apple Mail
-- **Email Management Skill** (`skill-email-management/`): Claude Code skill providing expert workflows and productivity strategies
+- **MCP Server** (modular structure): FastMCP server using AppleScript to control Apple Mail
+  - Entry point: `main.py`
+  - Tools organized in `tools/` directory
+  - Utilities in `utils/` directory
 - **Distribution**: Packaged as `.mcpb` bundle for easy installation in Claude Desktop
 
 ## Key Commands
@@ -16,9 +18,9 @@ Apple Mail MCP Server - A FastMCP-based Model Context Protocol server that provi
 ### Development & Testing
 ```bash
 # Run MCP server directly (for testing)
-./venv/bin/python3 apple_mail_mcp.py
+./venv/bin/python3 main.py
 
-# Or use the wrapper script
+# Or use the wrapper script (recommended)
 ./start_mcp.sh
 
 # Install dependencies
@@ -36,22 +38,20 @@ cd apple-mail-mcpb
 
 ### Installation Commands (for users)
 ```bash
-# Install MCP to Claude Code
-claude mcp add --transport stdio apple-mail -- $(pwd)/venv/bin/python3 apple_mail_mcp.py
-
-# Install Email Management Skill
-cp -r skill-email-management ~/.claude/skills/email-management
+# Install MCP to Claude Desktop (using wrapper script)
+claude mcp add --transport stdio apple-mail -- /bin/bash $(pwd)/start_mcp.sh
 ```
 
 ## Architecture
 
-### Core MCP Server (`apple_mail_mcp.py`)
+### Core MCP Server (Modular Architecture)
 
-**Single-file architecture using FastMCP framework:**
-- All 18 tools defined as `@mcp.tool()` decorated functions
-- AppleScript execution via `run_applescript()` helper
-- User preferences injection via `@inject_preferences` decorator
-- No external modules or complex structure
+**Modular architecture using FastMCP framework:**
+- Entry point: `main.py` - imports all tool modules and runs the MCP server
+- Central instance: `mcp_instance.py` - provides single FastMCP instance
+- Tool modules in `tools/` directory - each module contains related tools with `@mcp.tool()` decorators
+- Utilities in `utils/` directory - shared helpers like AppleScript execution
+- All 18 tools organized by category across tool modules
 
 **Tool Categories:**
 1. **Overview & Discovery**: `get_inbox_overview`, `list_accounts`, `list_mailboxes`
@@ -69,26 +69,11 @@ cp -r skill-email-management ~/.claude/skills/email-management
 - AppleScript timeout: 120 seconds
 - Email parsing via structured text output from AppleScript
 
-### Email Management Skill (`skill-email-management/`)
-
-**Structure:**
-- `SKILL.md`: Core workflows, tool orchestration patterns, productivity principles
-- `examples/`: Complete workflow guides (inbox zero, triage, folder organization)
-- `templates/`: Copy-paste patterns for common operations and search queries
-
-**Purpose:** Teaches Claude HOW to use the MCP tools effectively by providing:
-- Industry-standard workflows (GTD, Inbox Zero methodology)
-- Tool orchestration sequences for complex tasks
-- Safety-first approaches and best practices
-- Context-aware suggestions based on inbox state
-
-**Activation:** Automatic when user mentions email management topics (inbox, triage, organization, etc.)
-
 ### Distribution Package (`.mcpb`)
 
 **Build Process (`apple-mail-mcpb/build-mcpb.sh`):**
-1. Copies `manifest.json`, `apple_mail_mcp.py`, `requirements.txt`, `start_mcp.sh`
-2. Includes `skill-email-management/` directory
+1. Copies `manifest.json`, `main.py`, `mcp_instance.py`, `requirements.txt`, `start_mcp.sh`
+2. Copies tool modules (`tools/`), utilities (`utils/`), and optional directories (`resources/`, `prompts/`)
 3. Generates README.md for bundled installation
 4. Creates zip archive with `.mcpb` extension
 5. Virtual environment is created on user's machine on first run
@@ -163,7 +148,7 @@ When incrementing version:
 ## Testing Approach
 
 No formal test suite. Testing approach:
-1. Run server directly: `./venv/bin/python3 apple_mail_mcp.py`
+1. Run server directly: `./venv/bin/python3 main.py` or `./start_mcp.sh`
 2. Use MCP inspector or Claude Desktop to test tools
 3. Test with various Mail account types (Gmail, Exchange, iCloud)
 4. Verify nested mailbox paths work correctly
@@ -172,18 +157,14 @@ No formal test suite. Testing approach:
 ## Common Development Tasks
 
 ### Adding a New Tool
-1. Add `@mcp.tool()` decorated function in `apple_mail_mcp.py`
-2. Write AppleScript logic for Mail.app interaction
-3. Add tool metadata to `apple-mail-mcpb/manifest.json` → `"tools"` array
-4. Update `CHANGELOG.md`
-5. Increment version in `manifest.json`
-6. Rebuild bundle
-
-### Modifying Skill Workflows
-1. Edit files in `skill-email-management/`
-2. Test by asking Claude Code email management questions
-3. Skill changes take effect immediately (no rebuild needed)
-4. Update `skill-email-management/README.md` if workflow structure changes
+1. Choose appropriate tool module in `tools/` directory (or create new module)
+2. Add `@mcp.tool()` decorated function in the tool module
+3. Import the new module in `main.py` if creating a new module
+4. Write AppleScript logic for Mail.app interaction (use utilities from `utils/`)
+5. Add tool metadata to `apple-mail-mcpb/manifest.json` → `"tools"` array
+6. Update `CHANGELOG.md`
+7. Increment version in `manifest.json`
+8. Rebuild bundle
 
 ### Debugging AppleScript Issues
 - Test AppleScript directly: `osascript -e 'tell application "Mail" to ...'`

@@ -41,12 +41,41 @@ if [ ! -d "${SOURCE_DIR}" ]; then
 fi
 
 # Copy the main Python script
-if [ ! -f "${SOURCE_DIR}/apple_mail_mcp.py" ]; then
-    echo -e "  ${RED}✗${NC} Python script not found: ${SOURCE_DIR}/apple_mail_mcp.py"
+if [ ! -f "${SOURCE_DIR}/main.py" ]; then
+    echo -e "  ${RED}✗${NC} Python script not found: ${SOURCE_DIR}/main.py"
     exit 1
 fi
-cp "${SOURCE_DIR}/apple_mail_mcp.py" "${BUILD_DIR}/"
-chmod +x "${BUILD_DIR}/apple_mail_mcp.py"
+cp "${SOURCE_DIR}/main.py" "${BUILD_DIR}/"
+chmod +x "${BUILD_DIR}/main.py"
+
+# Copy the mcp_instance module
+if [ ! -f "${SOURCE_DIR}/mcp_instance.py" ]; then
+    echo -e "  ${RED}✗${NC} MCP instance not found: ${SOURCE_DIR}/mcp_instance.py"
+    exit 1
+fi
+cp "${SOURCE_DIR}/mcp_instance.py" "${BUILD_DIR}/"
+
+# Copy tool modules directory
+if [ ! -d "${SOURCE_DIR}/tools" ]; then
+    echo -e "  ${RED}✗${NC} Tools directory not found: ${SOURCE_DIR}/tools"
+    exit 1
+fi
+cp -r "${SOURCE_DIR}/tools" "${BUILD_DIR}/"
+
+# Copy utils directory
+if [ ! -d "${SOURCE_DIR}/utils" ]; then
+    echo -e "  ${RED}✗${NC} Utils directory not found: ${SOURCE_DIR}/utils"
+    exit 1
+fi
+cp -r "${SOURCE_DIR}/utils" "${BUILD_DIR}/"
+
+# Copy resources and prompts directories (if they exist and are not empty)
+if [ -d "${SOURCE_DIR}/resources" ]; then
+    cp -r "${SOURCE_DIR}/resources" "${BUILD_DIR}/"
+fi
+if [ -d "${SOURCE_DIR}/prompts" ]; then
+    cp -r "${SOURCE_DIR}/prompts" "${BUILD_DIR}/"
+fi
 
 # Copy requirements.txt
 if [ ! -f "${SOURCE_DIR}/requirements.txt" ]; then
@@ -64,49 +93,23 @@ fi
 cp "${SOURCE_DIR}/start_mcp.sh" "${BUILD_DIR}/"
 chmod +x "${BUILD_DIR}/start_mcp.sh"
 
-# Copy Email Management Skill
-echo -e "\n${YELLOW}Step 5: Copying Email Management Skill...${NC}"
-if [ -d "${SOURCE_DIR}/skill-email-management" ]; then
-    cp -r "${SOURCE_DIR}/skill-email-management" "${BUILD_DIR}/"
-    echo -e "  ${GREEN}✓${NC} Email Management Expert Skill included"
-else
-    echo -e "  ${YELLOW}⚠${NC} Skill directory not found (optional, skipping)"
-fi
-
 # Note: Virtual environment will be created on user's machine during first run
-echo -e "\n${YELLOW}Step 6: Skipping venv creation (will be created on user's machine)...${NC}"
+echo -e "\n${YELLOW}Step 5: Skipping venv creation (will be created on user's machine)...${NC}"
 echo -e "  ${GREEN}✓${NC} Venv will be initialized automatically on first run using user's Python installation"
 
-# Step 7: Create README
-echo -e "\n${YELLOW}Step 7: Creating README...${NC}"
+# Step 6: Create README
+echo -e "\n${YELLOW}Step 6: Creating README...${NC}"
 cat > "${BUILD_DIR}/README.md" << 'EOF'
-# Apple Mail MCP Server + Email Management Expert Skill
+# Apple Mail MCP Server
 
-Natural language interface for Apple Mail with expert email management workflows.
-
-**What's Included:**
-- 🔧 **MCP Server**: 18 powerful email management tools
-- 🎓 **Expert Skill**: Comprehensive workflows and productivity strategies
+Natural language interface for Apple Mail with 18 powerful email management tools.
 
 ## Quick Installation
 
-### Step 1: Install MCP in Claude Desktop
 1. Install this .mcpb file in Claude Desktop (Developer > MCP Servers > Install from file)
 2. Grant permissions when prompted for Mail.app access
 3. Restart Claude Desktop
-
-### Step 2: Install Email Management Skill (Recommended)
-The skill teaches Claude intelligent email workflows. Install to Claude Code:
-
-```bash
-# Extract skill from this bundle (or clone from repo)
-cp -r skill-email-management ~/.claude/skills/email-management
-```
-
-**Or manually:** Copy the `skill-email-management/` folder from this bundle to `~/.claude/skills/email-management`
-
-### Step 3: Start Using!
-Ask Claude about email management and watch the magic happen!
+4. Start using! Ask Claude to manage your emails
 
 ## Features
 
@@ -184,30 +187,6 @@ Download attachments:
 - Specify attachment name
 - Save to custom path
 
-## 🎓 About the Email Management Skill
-
-The included skill transforms Claude into an expert email management assistant:
-
-**Intelligent Workflows:**
-- ✅ Inbox Zero methodology
-- ✅ Daily email triage (10-15 min routines)
-- ✅ Folder organization strategies
-- ✅ Advanced search patterns
-- ✅ Bulk cleanup operations
-
-**What You Get:**
-- 3,500+ lines of email productivity expertise
-- 6 comprehensive workflow documents
-- Copy-paste ready templates
-- Industry best practices (GTD, Inbox Zero)
-- Context-aware suggestions
-
-**Example Queries with Skill:**
-- "Help me achieve inbox zero" → Full workflow guidance
-- "Triage my inbox" → Quick daily routine
-- "How should I organize my project emails?" → Structure recommendations
-- "Clean up old emails" → Safe cleanup process
-
 ## Configuration
 
 **Email Preferences (Optional):**
@@ -283,27 +262,18 @@ else
     exit 1
 fi
 
-# Step 9: Clean up
-echo -e "\n${YELLOW}Step 9: Cleaning up...${NC}"
+# Step 8: Clean up
+echo -e "\n${YELLOW}Step 8: Cleaning up...${NC}"
 rm -rf "${BUILD_DIR}"
 
 echo -e "\n${GREEN}=========================================${NC}"
 echo -e "${GREEN}Build completed successfully!${NC}"
 echo -e "\nPackage created: ${GREEN}${OUTPUT_FILE}${NC}"
 echo -e "\n${YELLOW}Installation Instructions:${NC}"
-echo -e "\n${GREEN}Step 1: Install MCP in Claude Desktop${NC}"
 echo -e "  1. Open Claude Desktop settings"
 echo -e "  2. Navigate to Developer > MCP Servers"
 echo -e "  3. Click 'Install from file' and select the .mcpb file"
 echo -e "  4. Grant Mail.app permissions when prompted"
 echo -e "  5. Restart Claude Desktop"
-echo -e "\n${GREEN}Step 2: Install Email Management Skill (Recommended)${NC}"
-echo -e "  Extract and install the skill to Claude Code:"
-echo -e "  ${YELLOW}unzip -q \"${OUTPUT_FILE}\" skill-email-management -d /tmp/${NC}"
-echo -e "  ${YELLOW}cp -r /tmp/skill-email-management ~/.claude/skills/email-management${NC}"
-echo -e "\n  Or extract the .mcpb and manually copy the skill-email-management/ folder"
-echo -e "\n${GREEN}What You Get:${NC}"
-echo -e "  🔧 MCP Server: 18 powerful email management tools"
-echo -e "  🎓 Expert Skill: Intelligent workflows and productivity strategies"
-echo -e "\nThis bundle provides comprehensive email management for Claude,"
-echo -e "combining powerful tools with expert workflow knowledge!"
+echo -e "\n${GREEN}Ready to use!${NC}"
+echo -e "Ask Claude to manage your emails with 18 powerful tools."

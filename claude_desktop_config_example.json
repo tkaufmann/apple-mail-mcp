@@ -1,10 +1,13 @@
 {
   "mcpServers": {
     "apple-mail": {
-      "command": "/path/to/apple-mail-mcp/venv/bin/python3",
+      "command": "/bin/bash",
       "args": [
-        "/path/to/apple-mail-mcp/apple_mail_mcp.py"
-      ]
+        "/path/to/apple-mail-mcp/start_mcp.sh"
+      ],
+      "env": {
+        "USER_EMAIL_PREFERENCES": "Default to main account, show max 50 emails, prefer Archive folder"
+      }
     }
   }
 }
