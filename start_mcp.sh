@@ -10,7 +10,7 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="${SCRIPT_DIR}/venv"
 REQUIREMENTS="${SCRIPT_DIR}/requirements.txt"
-PYTHON_SCRIPT="${SCRIPT_DIR}/apple_mail_mcp.py"
+PYTHON_SCRIPT="${SCRIPT_DIR}/main.py"
 
 # Function to log to stderr (visible in Claude Desktop logs)
 log_error() {
