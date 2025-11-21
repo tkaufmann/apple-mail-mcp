@@ -5,10 +5,14 @@ Provides helper functions for executing AppleScript commands and parsing email d
 
 import subprocess
 import os
+from pathlib import Path
 from typing import List, Dict, Any
 
 # Load user preferences from environment
 USER_PREFERENCES = os.environ.get("USER_EMAIL_PREFERENCES", "")
+
+# Base path for AppleScript files
+SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 
 
 def inject_preferences(func):
@@ -22,7 +26,7 @@ def inject_preferences(func):
 
 
 def run_applescript(script: str) -> str:
-    """Execute AppleScript and return output"""
+    """Execute AppleScript string and return output"""
     try:
         result = subprocess.run(
             ['osascript', '-e', script],
@@ -35,6 +39,47 @@ def run_applescript(script: str) -> str:
         raise Exception("AppleScript execution timed out")
     except Exception as e:
         raise Exception(f"AppleScript execution failed: {str(e)}")
+
+
+def run_applescript_file(script_path: str, *args) -> str:
+    """
+    Execute AppleScript file with arguments and return output.
+
+    Args:
+        script_path: Path relative to scripts/ directory (e.g., "organization/list_accounts.applescript")
+        *args: Arguments to pass to the AppleScript (accessed via 'on run argv' in the script)
+
+    Returns:
+        Script output as string
+
+    Example:
+        run_applescript_file("inbox/list_inbox_emails.applescript", "Gmail", 10)
+    """
+    full_path = SCRIPTS_DIR / script_path
+
+    if not full_path.exists():
+        raise FileNotFoundError(f"AppleScript file not found: {full_path}")
+
+    try:
+        # Build command: osascript <script_path> <arg1> <arg2> ...
+        cmd = ['osascript', str(full_path)] + [str(arg) for arg in args]
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            raise Exception(f"AppleScript error: {result.stderr}")
+
+        return result.stdout.strip()
+
+    except subprocess.TimeoutExpired:
+        raise Exception(f"AppleScript execution timed out: {script_path}")
+    except Exception as e:
+        raise Exception(f"AppleScript execution failed ({script_path}): {str(e)}")
 
 
 def parse_email_list(output: str) -> List[Dict[str, Any]]:

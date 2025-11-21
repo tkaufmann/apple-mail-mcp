@@ -5,7 +5,7 @@ Provides tools for moving emails, managing email status, and listing mailboxes a
 
 from typing import Optional, List
 from mcp_instance import mcp
-from utils.applescript import run_applescript, inject_preferences
+from utils.applescript import run_applescript, run_applescript_file, inject_preferences
 
 
 @mcp.tool()
@@ -17,23 +17,7 @@ def list_accounts() -> List[str]:
     Returns:
         List of account names
     """
-
-    script = '''
-    tell application "Mail"
-        set accountNames to {}
-        set allAccounts to every account
-
-        repeat with anAccount in allAccounts
-            set accountName to name of anAccount
-            set end of accountNames to accountName
-        end repeat
-
-        set AppleScript's text item delimiters to "|"
-        return accountNames as string
-    end tell
-    '''
-
-    result = run_applescript(script)
+    result = run_applescript_file("organization/list_accounts.applescript")
     return result.split('|') if result else []
 
 
@@ -54,73 +38,11 @@ def list_mailboxes(
         Formatted list of mailboxes with optional message counts.
         For nested mailboxes, shows both indented format and path format (e.g., "Projects/Amplify Impact")
     """
-
-    count_script = '''
-        try
-            set msgCount to count of messages of aMailbox
-            set unreadCount to unread count of aMailbox
-            set outputText to outputText & " (" & msgCount & " total, " & unreadCount & " unread)"
-        on error
-            set outputText to outputText & " (count unavailable)"
-        end try
-    ''' if include_counts else ''
-
-    account_filter = f'''
-        if accountName is "{account}" then
-    ''' if account else ''
-
-    account_filter_end = 'end if' if account else ''
-
-    script = f'''
-    tell application "Mail"
-        set outputText to "MAILBOXES" & return & return
-        set allAccounts to every account
-
-        repeat with anAccount in allAccounts
-            set accountName to name of anAccount
-
-            {account_filter}
-                set outputText to outputText & "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" & return
-                set outputText to outputText & "📁 ACCOUNT: " & accountName & return
-                set outputText to outputText & "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" & return & return
-
-                try
-                    set accountMailboxes to every mailbox of anAccount
-
-                    repeat with aMailbox in accountMailboxes
-                        set mailboxName to name of aMailbox
-                        set outputText to outputText & "  📂 " & mailboxName
-
-                        {count_script}
-
-                        set outputText to outputText & return
-
-                        -- List sub-mailboxes with path notation
-                        try
-                            set subMailboxes to every mailbox of aMailbox
-                            repeat with subBox in subMailboxes
-                                set subName to name of subBox
-                                set outputText to outputText & "    └─ " & subName & " [Path: " & mailboxName & "/" & subName & "]"
-
-                                {count_script.replace('aMailbox', 'subBox') if include_counts else ''}
-
-                                set outputText to outputText & return
-                            end repeat
-                        end try
-                    end repeat
-
-                    set outputText to outputText & return
-                on error errMsg
-                    set outputText to outputText & "  ⚠ Error accessing mailboxes: " & errMsg & return & return
-                end try
-            {account_filter_end}
-        end repeat
-
-        return outputText
-    end tell
-    '''
-
-    result = run_applescript(script)
+    result = run_applescript_file(
+        "organization/list_mailboxes.applescript",
+        account or "",
+        "true" if include_counts else "false"
+    )
     return result
 
 
@@ -146,80 +68,19 @@ def move_email(
     Returns:
         Confirmation message with details of moved emails
     """
-
-    # Parse nested mailbox path
+    # Parse nested mailbox path and pass as comma-separated string
     mailbox_parts = to_mailbox.split('/')
+    mailbox_path_parts = ','.join(mailbox_parts)
 
-    # Build the nested mailbox reference
-    if len(mailbox_parts) > 1:
-        # Nested mailbox
-        dest_mailbox_script = f'mailbox "{mailbox_parts[-1]}" of '
-        for i in range(len(mailbox_parts) - 2, -1, -1):
-            dest_mailbox_script += f'mailbox "{mailbox_parts[i]}" of '
-        dest_mailbox_script += 'targetAccount'
-    else:
-        # Top-level mailbox
-        dest_mailbox_script = f'mailbox "{to_mailbox}" of targetAccount'
-
-    script = f'''
-    tell application "Mail"
-        set outputText to "MOVING EMAILS" & return & return
-        set movedCount to 0
-
-        try
-            set targetAccount to account "{account}"
-            -- Try to get source mailbox (handle both "INBOX"/"Inbox" variations)
-            try
-                set sourceMailbox to mailbox "{from_mailbox}" of targetAccount
-            on error
-                if "{from_mailbox}" is "INBOX" then
-                    set sourceMailbox to mailbox "Inbox" of targetAccount
-                else
-                    error "Source mailbox not found"
-                end if
-            end try
-
-            -- Get destination mailbox (handles nested mailboxes)
-            set destMailbox to {dest_mailbox_script}
-            set sourceMessages to every message of sourceMailbox
-
-            repeat with aMessage in sourceMessages
-                if movedCount >= {max_moves} then exit repeat
-
-                try
-                    set messageSubject to subject of aMessage
-
-                    -- Check if subject contains keyword (case insensitive)
-                    if messageSubject contains "{subject_keyword}" then
-                        set messageSender to sender of aMessage
-                        set messageDate to date received of aMessage
-
-                        -- Move the message
-                        move aMessage to destMailbox
-
-                        set outputText to outputText & "✓ Moved: " & messageSubject & return
-                        set outputText to outputText & "  From: " & messageSender & return
-                        set outputText to outputText & "  Date: " & (messageDate as string) & return
-                        set outputText to outputText & "  {from_mailbox} → {to_mailbox}" & return & return
-
-                        set movedCount to movedCount + 1
-                    end if
-                end try
-            end repeat
-
-            set outputText to outputText & "========================================" & return
-            set outputText to outputText & "TOTAL MOVED: " & movedCount & " email(s)" & return
-            set outputText to outputText & "========================================" & return
-
-        on error errMsg
-            return "Error: " & errMsg & return & "Please check that account and mailbox names are correct. For nested mailboxes, use '/' separator (e.g., 'Projects/Amplify Impact')."
-        end try
-
-        return outputText
-    end tell
-    '''
-
-    result = run_applescript(script)
+    result = run_applescript_file(
+        "organization/move_email.applescript",
+        account,
+        subject_keyword,
+        to_mailbox,
+        from_mailbox,
+        max_moves,
+        mailbox_path_parts
+    )
     return result
 
 
@@ -247,84 +108,18 @@ def update_email_status(
     Returns:
         Confirmation message with details of updated emails
     """
+    # Validate action before calling AppleScript
+    valid_actions = ["mark_read", "mark_unread", "flag", "unflag"]
+    if action not in valid_actions:
+        return f"Error: Invalid action '{action}'. Use: {', '.join(valid_actions)}"
 
-    # Build search condition
-    conditions = []
-    if subject_keyword:
-        conditions.append(f'messageSubject contains "{subject_keyword}"')
-    if sender:
-        conditions.append(f'messageSender contains "{sender}"')
-
-    condition_str = ' and '.join(conditions) if conditions else 'true'
-
-    # Build action script
-    if action == "mark_read":
-        action_script = 'set read status of aMessage to true'
-        action_label = "Marked as read"
-    elif action == "mark_unread":
-        action_script = 'set read status of aMessage to false'
-        action_label = "Marked as unread"
-    elif action == "flag":
-        action_script = 'set flagged status of aMessage to true'
-        action_label = "Flagged"
-    elif action == "unflag":
-        action_script = 'set flagged status of aMessage to false'
-        action_label = "Unflagged"
-    else:
-        return f"Error: Invalid action '{action}'. Use: mark_read, mark_unread, flag, unflag"
-
-    script = f'''
-    tell application "Mail"
-        set outputText to "UPDATING EMAIL STATUS: {action_label}" & return & return
-        set updateCount to 0
-
-        try
-            set targetAccount to account "{account}"
-            -- Try to get mailbox
-            try
-                set targetMailbox to mailbox "{mailbox}" of targetAccount
-            on error
-                if "{mailbox}" is "INBOX" then
-                    set targetMailbox to mailbox "Inbox" of targetAccount
-                else
-                    error "Mailbox not found: {mailbox}"
-                end if
-            end try
-
-            set mailboxMessages to every message of targetMailbox
-
-            repeat with aMessage in mailboxMessages
-                if updateCount >= {max_updates} then exit repeat
-
-                try
-                    set messageSubject to subject of aMessage
-                    set messageSender to sender of aMessage
-                    set messageDate to date received of aMessage
-
-                    -- Apply filter conditions
-                    if {condition_str} then
-                        {action_script}
-
-                        set outputText to outputText & "✓ {action_label}: " & messageSubject & return
-                        set outputText to outputText & "   From: " & messageSender & return
-                        set outputText to outputText & "   Date: " & (messageDate as string) & return & return
-
-                        set updateCount to updateCount + 1
-                    end if
-                end try
-            end repeat
-
-            set outputText to outputText & "========================================" & return
-            set outputText to outputText & "TOTAL UPDATED: " & updateCount & " email(s)" & return
-            set outputText to outputText & "========================================" & return
-
-        on error errMsg
-            return "Error: " & errMsg
-        end try
-
-        return outputText
-    end tell
-    '''
-
-    result = run_applescript(script)
+    result = run_applescript_file(
+        "organization/update_email_status.applescript",
+        account,
+        action,
+        subject_keyword or "",
+        sender or "",
+        mailbox,
+        max_updates
+    )
     return result
